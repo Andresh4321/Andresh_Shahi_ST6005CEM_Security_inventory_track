@@ -1,0 +1,177 @@
+/* Dashboard-specific styles from lovable.ai */
+/* This file contains animations and utilities for dashboard pages only */
+
+/* Animation keyframes */
+@keyframes dashboard-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dashboard-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes dashboard-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes dashboard-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes dashboard-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px hsl(174 72% 40% / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px hsl(174 72% 40% / 0.5);
+  }
+}
+
+@keyframes dashboard-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Apply animations to dashboard pages */
+.dashboard-wrapper .animate-fade-in {
+  animation: dashboard-fade-in 0.5s ease-out forwards !important;
+}
+
+.dashboard-wrapper .animate-slide-in-left {
+  animation: dashboard-slide-in-left 0.5s ease-out forwards !important;
+}
+
+.dashboard-wrapper .animate-slide-in-right {
+  animation: dashboard-slide-in-right 0.5s ease-out forwards !important;
+}
+
+.dashboard-wrapper .animate-scale-in {
+  animation: dashboard-scale-in 0.3s ease-out forwards !important;
+}
+
+.dashboard-wrapper .animate-pulse-glow {
+  animation: dashboard-pulse-glow 2s ease-in-out infinite !important;
+}
+
+.dashboard-wrapper .animate-float {
+  animation: dashboard-float 3s ease-in-out infinite !important;
+}
+
+/* Stagger animation delays */
+.dashboard-wrapper .stagger-1 { animation-delay: 0.1s !important; }
+.dashboard-wrapper .stagger-2 { animation-delay: 0.2s !important; }
+.dashboard-wrapper .stagger-3 { animation-delay: 0.3s !important; }
+.dashboard-wrapper .stagger-4 { animation-delay: 0.4s !important; }
+.dashboard-wrapper .stagger-5 { animation-delay: 0.5s !important; }
+
+/* Gradient background utilities */
+.dashboard-wrapper .bg-gradient-primary {
+  background: linear-gradient(135deg, hsl(174 72% 40%) 0%, hsl(190 70% 42%) 100%) !important;
+}
+
+/* Text gradient utility */
+.dashboard-wrapper .text-gradient {
+  background: linear-gradient(135deg, hsl(174 72% 40%) 0%, hsl(190 70% 42%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Shadow glow effect */
+.dashboard-wrapper .shadow-glow {
+  box-shadow: 0 0 40px hsl(174 72% 40% / 0.15);
+}
+
+/* Custom scrollbar */
+.dashboard-wrapper ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dashboard-wrapper ::-webkit-scrollbar-track {
+  background: hsl(220 14% 96%);
+  border-radius: 3px;
+}
+
+.dashboard-wrapper ::-webkit-scrollbar-thumb {
+  background: hsl(220 10% 46% / 0.3);
+  border-radius: 3px;
+}
+
+.dashboard-wrapper ::-webkit-scrollbar-thumb:hover {
+  background: hsl(220 10% 46% / 0.5);
+}
+
+/* Dark mode scrollbar */
+.dark .dashboard-wrapper ::-webkit-scrollbar-track {
+  background: hsl(220 15% 18%);
+}
+
+.dark .dashboard-wrapper ::-webkit-scrollbar-thumb {
+  background: hsl(220 10% 55% / 0.3);
+}
+
+.dark .dashboard-wrapper ::-webkit-scrollbar-thumb:hover {
+  background: hsl(220 10% 55% / 0.5);
+}
+
+/* Font families */
+.dashboard-wrapper h1,
+.dashboard-wrapper h2,
+.dashboard-wrapper h3,
+.dashboard-wrapper h4,
+.dashboard-wrapper h5,
+.dashboard-wrapper h6,
+.dashboard-wrapper .font-display {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+/* Glass effects */
+.dashboard-wrapper .glass {
+  backdrop-filter: blur(20px);
+  background: hsl(0 0% 100% / 0.8);
+  border: 1px solid hsl(220 13% 91% / 0.5);
+}
+
+.dark .dashboard-wrapper .glass {
+  background: hsl(220 20% 13% / 0.8);
+  border: 1px solid hsl(220 15% 20% / 0.5);
+}
+
+.dashboard-wrapper .glass-dark {
+  backdrop-filter: blur(20px);
+  background: hsl(220 20% 14% / 0.9);
+  border: 1px solid hsl(220 15% 22% / 0.5);
+}
