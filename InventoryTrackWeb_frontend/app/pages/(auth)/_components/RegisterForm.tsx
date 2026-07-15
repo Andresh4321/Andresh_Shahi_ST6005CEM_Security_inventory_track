@@ -1,0 +1,139 @@
+
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
+import { RegisterData, registerSchema } from "../schema";
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { handleRegister } from "@/lib/actions/auth_action";
+
+export default function RegisterForm() {
+    const router = useRouter();
+
+    const {
+        register,
+        handleSubmit,
+        setError,
+        formState: { errors, isSubmitting },
+    } = useForm<RegisterData>({
+        resolver: zodResolver(registerSchema),
+        mode: "onSubmit",
+    });
+
+    const [pending, startTransition] = useTransition();
+
+    const submit = async (values: RegisterData) => {
+        //call action here
+        try {
+            const result = await handleRegister(values);
+
+            if (result.success) {
+                router.push("/login");
+            } else {
+                setError("root", {
+                    type: "server",
+                    message: result.message || "Registration failed",
+                });
+            }
+        } catch (err: any) {
+            setError("root", {
+                type: "server",
+                message: err.message || "Registration failed",
+            });
+        }
+           // setTransition( async () => {
+        //     await new Promise((resolve) => setTimeout(resolve, 1000));
+        //     router.push("/login");
+        // })
+        // // GO TO LOGIN PAGE
+        // console.log("register", values);
+    };
+
+    return (
+        <form onSubmit={handleSubmit(submit)} className="space-y-4">
+            {/* SERVER ERROR */}
+            {errors.root?.message && (
+                <p className="text-sm text-red-600 text-center">
+                    {errors.root.message}
+                </p>
+            )}
+
+            <div className="space-y-1">
+                <label className="text-sm font-medium">Full name</label>
+                <input
+                    {...register("fullname")}
+                    className="h-10 w-full rounded-md border px-3 text-sm"
+                />
+                {errors.fullname?.message && (
+                    <p className="text-xs text-red-600">{errors.fullname.message}</p>
+                )}
+            </div>
+
+            <div className="space-y-1">
+                <label className="text-sm font-medium">Email</label>
+                <input
+                    type="email"
+                    {...register("email")}
+                    className="h-10 w-full rounded-md border px-3 text-sm"
+                />
+                {errors.email?.message && (
+                    <p className="text-xs text-red-600">{errors.email.message}</p>
+                )}
+            </div>
+
+             <div className="space-y-1">
+                <label className="text-sm font-medium">Phone Number</label>
+                <input
+                    type="tel"
+                    {...register("phone_number")}
+                    className="h-10 w-full rounded-md border px-3 text-sm"
+                />
+                {errors.phone_number?.message && (
+                    <p className="text-xs text-red-600">{errors.phone_number.message}</p>
+                )}
+            </div>
+
+            <div className="space-y-1">
+                <label className="text-sm font-medium">Password</label>
+                <input
+                    type="password"
+                    {...register("password")}
+                    className="h-10 w-full rounded-md border px-3 text-sm"
+                />
+                {errors.password?.message && (
+                    <p className="text-xs text-red-600">{errors.password.message}</p>
+                )}
+            </div>
+
+            <div className="space-y-1">
+                <label className="text-sm font-medium">Confirm password</label>
+                <input
+                    type="password"
+                    {...register("confirmPassword")}
+                    className="h-10 w-full rounded-md border px-3 text-sm"
+                />
+                {errors.confirmPassword?.message && (
+                    <p className="text-xs text-red-600">
+                        {errors.confirmPassword.message}
+                    </p>
+                )}
+            </div>
+
+            <button
+  type="submit"
+  disabled={isSubmitting || pending}
+  className="h-10 w-full rounded-md bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors"
+>
+  {isSubmitting || pending ? "Creating account..." : "Create account"}
+</button>
+
+            <div className="text-center text-sm">
+                Already have an account?{" "}
+                <Link href="/login" className="font-semibold hover:underline text-teal-500">
+                    Log in
+                </Link>
+            </div>
+        </form>
+    );
+}
