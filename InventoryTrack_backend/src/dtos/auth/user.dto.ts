@@ -32,7 +32,7 @@ export type AdminLoginDTO = z.infer<typeof AdminLoginDto>;
 export const UpdateUserDto = z.object({
   fullname: z.string().optional(),
   email: z.string().email().optional(),
-  phone_number: z.string().min(3).max(20).optional(),
+  phone_number: z.string().min(1).max(20).optional(),
   password: z.string().min(6).optional(),
   role: z.enum(["user", "admin"]).optional(),
   profileImage: z.string().optional()
