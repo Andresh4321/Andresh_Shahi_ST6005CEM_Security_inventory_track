@@ -87,8 +87,16 @@ export const API = {
         REGISTER: '/api/auth/register',
         GET_USER: (id: string) => `/api/auth/${id}`,
         UPDATE_USER: (id: string) => `/api/auth/${id}`,
-        FORGOT_PASSWORD: '/api/auth/forgot-password', 
+        FORGOT_PASSWORD: '/api/auth/forgot-password',
         RESET_PASSWORD: (token: string) => `/api/auth/reset-password/${token}`,
+        CHANGE_PASSWORD: '/api/auth/change-password',
+        CSRF_TOKEN: '/api/auth/csrf-token',
+        MFA_SETUP: '/api/auth/mfa/setup',
+        MFA_VERIFY: '/api/auth/mfa/verify-setup',
+        MFA_DISABLE: '/api/auth/mfa/disable',
+        SEND_EMAIL_OTP: '/api/auth/email/send-otp',
+        VERIFY_EMAIL_OTP: '/api/auth/email/verify-otp',
+        GOOGLE_LOGIN: '/api/auth/google',
     },
     ADMIN: {
         ADMINLOGIN: '/api/auth/admin/login',
@@ -99,5 +107,5 @@ export const API = {
         UPDATE_IMAGE: (id: string) => `/api/admin/users/${id}/image`,
         DELETE_USER: (id: string) => `/api/admin/users/${id}`,
         CREATE_USER: () => '/api/admin/users',
-    }  
+    }
 };

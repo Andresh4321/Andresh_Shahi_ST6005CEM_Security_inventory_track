@@ -195,6 +195,18 @@ export const resetPassword = async (token: string, password: string) => {
     }
 };
 
+// Google OAuth login
+export const googleLogin = async (idToken: string) => {
+    try {
+        const response = await axios.post(API.AUTH.GOOGLE_LOGIN, { idToken });
+        return response.data;
+    } catch (err: Error | any) {
+        throw new Error(
+            err.response?.data?.message || err.message || "Google login failed"
+        );
+    }
+};
+
 // Update user profile image
 export const updateUserImage = async (id: string, formData: FormData) => {
     try {
@@ -214,9 +226,10 @@ export const updateUserImage = async (id: string, formData: FormData) => {
 // Upload profile image for the currently authenticated user
 export const uploadProfilePhoto = async (formData: FormData) => {
     try {
+        // Do NOT manually set Content-Type - axios will set it with proper multipart boundary
         const response = await axios.post('/api/auth/upload-photo', formData, {
             headers: {
-                'Content-Type': 'multipart/form-data',
+                'Content-Type': undefined as any, // Let axios set multipart boundary automatically
             },
         });
         return response.data;
@@ -235,6 +248,90 @@ export const updateProfile = async (id: string, data: { fullname?: string; phone
     } catch (err: any) {
         throw new Error(
             err.response?.data?.message || err.message || "Failed to update profile"
+        );
+    }
+};
+
+// Change password (authenticated user)
+export const changePassword = async (data: { currentPassword: string; newPassword: string; confirmNewPassword: string }) => {
+    try {
+        const response = await axios.post(API.AUTH.CHANGE_PASSWORD, data);
+        return response.data;
+    } catch (err: any) {
+        throw new Error(
+            err.response?.data?.message || err.message || "Failed to change password"
+        );
+    }
+};
+
+// Get CSRF token
+export const getCsrfToken = async () => {
+    try {
+        const response = await axios.get(API.AUTH.CSRF_TOKEN);
+        return response.data;
+    } catch (err: any) {
+        throw new Error(
+            err.response?.data?.message || err.message || "Failed to fetch CSRF token"
+        );
+    }
+};
+
+// Setup MFA - returns QR code and secret
+export const setupMfa = async () => {
+    try {
+        const response = await axios.post(API.AUTH.MFA_SETUP);
+        return response.data;
+    } catch (err: any) {
+        throw new Error(
+            err.response?.data?.message || err.message || "Failed to setup MFA"
+        );
+    }
+};
+
+// Verify MFA setup with TOTP token
+export const verifyMfaSetup = async (token: string) => {
+    try {
+        const response = await axios.post(API.AUTH.MFA_VERIFY, { token });
+        return response.data;
+    } catch (err: any) {
+        throw new Error(
+            err.response?.data?.message || err.message || "Failed to verify MFA"
+        );
+    }
+};
+
+// Disable MFA
+export const disableMfa = async (token: string) => {
+    try {
+        const response = await axios.post(API.AUTH.MFA_DISABLE, { token });
+        return response.data;
+    } catch (err: any) {
+        throw new Error(
+            err.response?.data?.message || err.message || "Failed to disable MFA"
+        );
+    }
+};
+
+// Send email OTP
+export const sendEmailOtp = async () => {
+    try {
+        const response = await axios.post(API.AUTH.SEND_EMAIL_OTP);
+        return response.data;
+    } catch (err: any) {
+        throw new Error(
+            err.response?.data?.message || err.message || "Failed to send email OTP"
+        );
+    }
+};
+
+// Verify email OTP
+export const verifyEmailOtp = async (otp: string) => {
+    try {
+        const response = await axios.post(API.AUTH.VERIFY_EMAIL_OTP, { otp });
+        return response.data;
+    } catch (err: any) {
+        throw new Error(
+            err.response?.data?.message || err.message || "Failed to verify email OTP"
         );
     }
 };
