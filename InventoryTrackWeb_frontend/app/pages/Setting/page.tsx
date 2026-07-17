@@ -5,9 +5,10 @@ import { DashboardLayout } from '../dashboard/DashboardLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { User, Camera, Mail, Phone, MapPin, Building, Save } from 'lucide-react';
+import { User, Camera, Mail, Phone, MapPin, Building, Save, Shield, Key, Lock, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/app/hooks/use-toast';
-import { uploadProfilePhoto, updateProfile } from '@/lib/api/auth';
+import { uploadProfilePhoto, updateProfile, changePassword, setupMfa, verifyMfaSetup, disableMfa, sendEmailOtp, verifyEmailOtp } from '@/lib/api/auth';
+import PasswordStrengthBar from '../(auth)/_components/PasswordStrengthBar';
 
 const Settings = () => {
   const { toast } = useToast();
@@ -296,29 +297,28 @@ const Settings = () => {
           </div>
         </Card>
 
-        {/* Security Section */}
+        {/* Change Password Section */}
         <Card className="p-8 opacity-0 animate-fade-in stagger-2">
-          <h3 className="font-display text-lg font-semibold mb-6">Security</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-              <div>
-                <p className="font-medium">Password</p>
-                <p className="text-sm text-muted-foreground">••••••••</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/auth/reset-password'}>
-                Change Password
-              </Button>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-              <div>
-                <p className="font-medium">Two-Factor Authentication</p>
-                <p className="text-sm text-muted-foreground">Not enabled</p>
-              </div>
-              <Button variant="outline" size="sm" disabled>
-                Enable 2FA
-              </Button>
-            </div>
-          </div>
+          <h3 className="font-display text-lg font-semibold mb-6 flex items-center gap-2">
+            <Key className="w-5 h-5" /> Change Password
+          </h3>
+          <ChangePasswordSection toast={toast} />
+        </Card>
+
+        {/* MFA Section */}
+        <Card className="p-8 opacity-0 animate-fade-in stagger-2">
+          <h3 className="font-display text-lg font-semibold mb-6 flex items-center gap-2">
+            <Shield className="w-5 h-5" /> Two-Factor Authentication (MFA)
+          </h3>
+          <MfaSection toast={toast} user={user} />
+        </Card>
+
+        {/* Email Verification Section */}
+        <Card className="p-8 opacity-0 animate-fade-in stagger-2">
+          <h3 className="font-display text-lg font-semibold mb-6 flex items-center gap-2">
+            <Mail className="w-5 h-5" /> Email Verification
+          </h3>
+          <EmailVerificationSection toast={toast} user={user} />
         </Card>
 
         {/* App Preferences */}
@@ -349,5 +349,298 @@ const Settings = () => {
     </DashboardLayout>
   );
 };
+
+// ===== CHANGE PASSWORD SUB-COMPONENT =====
+function ChangePasswordSection({ toast }: { toast: any }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [isChanging, setIsChanging] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      toast({ title: "Error", description: "All fields are required", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast({ title: "Error", description: "New passwords do not match", variant: "destructive" });
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast({ title: "Error", description: "Password must be at least 8 characters", variant: "destructive" });
+      return;
+    }
+    setIsChanging(true);
+    try {
+      const result = await changePassword({ currentPassword, newPassword, confirmNewPassword });
+      toast({ title: "Success", description: result.message || "Password changed successfully" });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to change password", variant: "destructive" });
+    } finally {
+      setIsChanging(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground mb-4">
+        Password must be 8+ characters with uppercase, lowercase, number, and special character. Cannot reuse last 5 passwords. Expires every 90 days.
+      </p>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Current Password</label>
+        <Input
+          type={showPasswords ? "text" : "password"}
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          placeholder="Enter current password"
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">New Password</label>
+        <Input
+          type={showPasswords ? "text" : "password"}
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="Enter new password"
+        />
+        <PasswordStrengthBar password={newPassword} />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Confirm New Password</label>
+        <Input
+          type={showPasswords ? "text" : "password"}
+          value={confirmNewPassword}
+          onChange={(e) => setConfirmNewPassword(e.target.value)}
+          placeholder="Confirm new password"
+        />
+        {confirmNewPassword && newPassword !== confirmNewPassword && (
+          <p className="text-xs text-red-500">Passwords do not match</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <input type="checkbox" id="showPwd" checked={showPasswords} onChange={() => setShowPasswords(!showPasswords)} />
+        <label htmlFor="showPwd" className="text-sm text-muted-foreground">Show passwords</label>
+      </div>
+      <Button onClick={handleChangePassword} disabled={isChanging}>
+        <Lock className="w-4 h-4 mr-2" />
+        {isChanging ? "Changing..." : "Change Password"}
+      </Button>
+    </div>
+  );
+}
+
+// ===== MFA SUB-COMPONENT =====
+function MfaSection({ toast, user }: { toast: any; user: any }) {
+  const [mfaEnabled, setMfaEnabled] = useState(user?.mfaEnabled || false);
+  const [qrCode, setQrCode] = useState('');
+  const [mfaSecret, setMfaSecret] = useState('');
+  const [verifyToken, setVerifyToken] = useState('');
+  const [disableToken, setDisableToken] = useState('');
+  const [isSettingUp, setIsSettingUp] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  const [showDisable, setShowDisable] = useState(false);
+
+  const handleSetupMfa = async () => {
+    setIsSettingUp(true);
+    try {
+      const result = await setupMfa();
+      setQrCode(result.data?.qrCode || result.qrCode);
+      setMfaSecret(result.data?.secret || result.secret);
+      setShowSetup(true);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSettingUp(false);
+    }
+  };
+
+  const handleVerifyMfa = async () => {
+    if (!verifyToken || verifyToken.length !== 6) {
+      toast({ title: "Error", description: "Enter a valid 6-digit code", variant: "destructive" });
+      return;
+    }
+    try {
+      await verifyMfaSetup(verifyToken);
+      setMfaEnabled(true);
+      setShowSetup(false);
+      setQrCode('');
+      setMfaSecret('');
+      setVerifyToken('');
+      toast({ title: "Success", description: "MFA enabled successfully!" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleDisableMfa = async () => {
+    if (!disableToken || disableToken.length !== 6) {
+      toast({ title: "Error", description: "Enter your current TOTP code to disable MFA", variant: "destructive" });
+      return;
+    }
+    try {
+      await disableMfa(disableToken);
+      setMfaEnabled(false);
+      setShowDisable(false);
+      setDisableToken('');
+      toast({ title: "Success", description: "MFA disabled" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+        <div className={`w-3 h-3 rounded-full ${mfaEnabled ? 'bg-green-500' : 'bg-red-400'}`} />
+        <p className="font-medium">{mfaEnabled ? 'MFA Enabled' : 'MFA Not Enabled'}</p>
+        {mfaEnabled ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-red-400" />}
+      </div>
+
+      {!mfaEnabled && !showSetup && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-3">
+            Enable Two-Factor Authentication using a TOTP app (Google Authenticator, Authy, etc.) for an extra layer of security.
+          </p>
+          <Button onClick={handleSetupMfa} disabled={isSettingUp}>
+            <Shield className="w-4 h-4 mr-2" />
+            {isSettingUp ? "Setting up..." : "Enable MFA"}
+          </Button>
+        </div>
+      )}
+
+      {showSetup && (
+        <div className="space-y-4 p-4 border rounded-lg">
+          <p className="text-sm font-medium">Scan this QR code with your authenticator app:</p>
+          {qrCode && <img src={qrCode} alt="MFA QR Code" className="w-48 h-48 mx-auto border rounded" />}
+          <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded font-mono break-all">
+            Manual Key: {mfaSecret}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Enter 6-digit verification code:</label>
+            <Input
+              value={verifyToken}
+              onChange={(e) => setVerifyToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="000000"
+              maxLength={6}
+              className="text-center text-lg tracking-widest"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleVerifyMfa}>Verify & Enable</Button>
+            <Button variant="outline" onClick={() => { setShowSetup(false); setQrCode(''); setMfaSecret(''); }}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      {mfaEnabled && !showDisable && (
+        <Button variant="outline" onClick={() => setShowDisable(true)} className="text-red-500">
+          Disable MFA
+        </Button>
+      )}
+
+      {showDisable && (
+        <div className="space-y-3 p-4 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-600">Enter your current TOTP code to confirm disabling MFA:</p>
+          <Input
+            value={disableToken}
+            onChange={(e) => setDisableToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            placeholder="000000"
+            maxLength={6}
+            className="text-center text-lg tracking-widest"
+          />
+          <div className="flex gap-2">
+            <Button onClick={handleDisableMfa} variant="outline" className="text-red-600 border-red-300">Confirm Disable</Button>
+            <Button variant="outline" onClick={() => setShowDisable(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== EMAIL VERIFICATION SUB-COMPONENT =====
+function EmailVerificationSection({ toast, user }: { toast: any; user: any }) {
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verified, setVerified] = useState(user?.emailVerified || false);
+
+  const handleSendOtp = async () => {
+    setIsSending(true);
+    try {
+      await sendEmailOtp();
+      setOtpSent(true);
+      toast({ title: "Success", description: "OTP sent to your email" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.length !== 6) {
+      toast({ title: "Error", description: "Enter a valid 6-digit OTP", variant: "destructive" });
+      return;
+    }
+    setIsVerifying(true);
+    try {
+      await verifyEmailOtp(otp);
+      setVerified(true);
+      setOtpSent(false);
+      toast({ title: "Success", description: "Email verified!" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+        <div className={`w-3 h-3 rounded-full ${verified ? 'bg-green-500' : 'bg-yellow-400'}`} />
+        <p className="font-medium">{verified ? 'Email Verified' : 'Email Not Verified'}</p>
+        {verified ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-yellow-500" />}
+      </div>
+
+      {!verified && !otpSent && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-3">Verify your email address by receiving a one-time code.</p>
+          <Button onClick={handleSendOtp} disabled={isSending}>
+            <Mail className="w-4 h-4 mr-2" />
+            {isSending ? "Sending..." : "Send Verification OTP"}
+          </Button>
+        </div>
+      )}
+
+      {otpSent && !verified && (
+        <div className="space-y-3 p-4 border rounded-lg">
+          <p className="text-sm">Enter the 6-digit OTP sent to your email:</p>
+          <Input
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            placeholder="000000"
+            maxLength={6}
+            className="text-center text-lg tracking-widest"
+          />
+          <div className="flex gap-2">
+            <Button onClick={handleVerifyOtp} disabled={isVerifying}>
+              {isVerifying ? "Verifying..." : "Verify OTP"}
+            </Button>
+            <Button variant="outline" onClick={handleSendOtp} disabled={isSending}>
+              Resend
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default Settings;
