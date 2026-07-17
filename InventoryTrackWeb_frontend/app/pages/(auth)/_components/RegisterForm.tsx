@@ -7,6 +7,8 @@ import { RegisterData, registerSchema } from "../schema";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { handleRegister } from "@/lib/actions/auth_action";
+import PasswordStrengthBar from "./PasswordStrengthBar";
+import GoogleLoginButton from "./GoogleLoginButton";
 
 export default function RegisterForm() {
     const router = useRouter();
@@ -15,6 +17,7 @@ export default function RegisterForm() {
         register,
         handleSubmit,
         setError,
+        watch,
         formState: { errors, isSubmitting },
     } = useForm<RegisterData>({
         resolver: zodResolver(registerSchema),
@@ -22,9 +25,9 @@ export default function RegisterForm() {
     });
 
     const [pending, startTransition] = useTransition();
+    const passwordValue = watch("password", "");
 
     const submit = async (values: RegisterData) => {
-        //call action here
         try {
             const result = await handleRegister(values);
 
@@ -42,12 +45,6 @@ export default function RegisterForm() {
                 message: err.message || "Registration failed",
             });
         }
-           // setTransition( async () => {
-        //     await new Promise((resolve) => setTimeout(resolve, 1000));
-        //     router.push("/login");
-        // })
-        // // GO TO LOGIN PAGE
-        // console.log("register", values);
     };
 
     return (
@@ -101,6 +98,7 @@ export default function RegisterForm() {
                     {...register("password")}
                     className="h-10 w-full rounded-md border px-3 text-sm"
                 />
+                <PasswordStrengthBar password={passwordValue} />
                 {errors.password?.message && (
                     <p className="text-xs text-red-600">{errors.password.message}</p>
                 )}
@@ -127,6 +125,22 @@ export default function RegisterForm() {
 >
   {isSubmitting || pending ? "Creating account..." : "Create account"}
 </button>
+
+            {/* OAuth Divider */}
+            <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-black/10 dark:border-white/15" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or sign up with</span>
+                </div>
+            </div>
+
+            {/* Google OAuth */}
+            <GoogleLoginButton
+                onError={(msg) => setError("root", { type: "server", message: msg })}
+                onSuccess={() => {}}
+            />
 
             <div className="text-center text-sm">
                 Already have an account?{" "}
