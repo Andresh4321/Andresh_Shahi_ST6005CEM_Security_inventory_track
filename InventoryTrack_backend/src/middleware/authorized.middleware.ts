@@ -44,6 +44,7 @@ export async function authorizedMiddelWare(req: Request, res: Response, next: Ne
             { success: false, message: err.message || "Unauthorized" }
         )
     }
+    
     // if(req.headers && req.headers.authorization){
     //     return next();
     // }
