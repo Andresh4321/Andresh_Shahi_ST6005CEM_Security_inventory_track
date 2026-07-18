@@ -4,12 +4,14 @@ import { authorizedMiddelWare } from "../../middleware/authorized.middleware";
 import { uploads } from "../../middleware/upload.middleware";
 import { authLimiter, passwordResetLimiter } from "../../middleware/rateLimiter.middleware";
 import { generateCsrfToken } from "../../middleware/csrf.middleware";
+import { verifyCaptcha } from "../../middleware/captcha.middleware";
 
 const router: Router = Router();
 const authController = new AuthController();
 
 // Public auth endpoints with rate limiting
-router.post('/register', authLimiter, authController.registerUser);
+// CAPTCHA on register only — login intentionally left without CAPTCHA
+router.post('/register', authLimiter, verifyCaptcha, authController.registerUser);
 router.post('/login', authLimiter, authController.loginUser);
 
 // Admin login endpoint (requires email, password, role: 'admin')
