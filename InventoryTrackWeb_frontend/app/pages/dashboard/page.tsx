@@ -36,6 +36,7 @@ const Dashboard = () => {
   const [materials, setMaterials] = useState<InventoryMaterial[]>([]);
   const [batches, setBatches] = useState<DashboardBatch[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const loadData = async () => {
@@ -65,48 +66,21 @@ const Dashboard = () => {
       console.error('Failed to load dashboard data', error);
     } finally {
       setIsRefreshing(false);
+      setIsInitialLoad(false);
     }
   };
 
   useEffect(() => {
     loadData();
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 30 minutes (1800000ms)
     const refreshInterval = setInterval(() => {
       loadData();
-    }, 30000);
+    }, 1800000);
 
-    // Refresh data when tab/window becomes visible
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        loadData();
-      }
-    };
-
-    // Refresh data when window regains focus (navigating back from other pages)
-    const handleFocus = () => {
-      loadData();
-    };
-
-    // Listen for data changes from other pages/tabs
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'dashboard_refresh_trigger') {
-        loadData();
-        // Clear the trigger
-        localStorage.removeItem('dashboard_refresh_trigger');
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('storage', handleStorageChange);
-
-    // Cleanup interval and listeners on unmount
+    // Cleanup interval on unmount
     return () => {
       clearInterval(refreshInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -124,6 +98,20 @@ const Dashboard = () => {
     ? completedBatches.reduce((acc, b) => acc + (b.wastage || 0), 0) / completedBatches.length
     : 0;
 
+  // Show loading skeleton during initial data fetch (prevents showing 0s)
+  if (isInitialLoad) {
+    return (
+      <DashboardLayout title="Dashboard" subtitle="Welcome back! Here's your inventory overview.">
+        <div className="flex justify-center items-center py-20">
+          <div className="flex flex-col items-center gap-4">
+            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">Loading dashboard data...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout title="Dashboard" subtitle="Welcome back! Here's your inventory overview.">
       {/* Refresh Button */}
@@ -131,7 +119,7 @@ const Dashboard = () => {
         <div className="text-sm text-muted-foreground">
           {lastUpdated && (
             <>
-              Last updated: {lastUpdated.toLocaleTimeString()} • Auto-refreshes every 30s
+              Last updated: {lastUpdated.toLocaleTimeString()} • Auto-refreshes every 30min
             </>
           )}
         </div>

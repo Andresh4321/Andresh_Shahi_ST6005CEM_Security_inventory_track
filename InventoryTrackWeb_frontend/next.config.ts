@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  // Disable React Strict Mode to prevent double-mounting in development
+  // (Strict Mode causes components to mount→unmount→remount, doubling API calls)
+  reactStrictMode: false,
+
   // Allow Burp Suite browser (127.0.0.1) to access dev server without cross-origin warnings
   allowedDevOrigins: ['http://127.0.0.1:3000', 'http://localhost:3000', 'http://192.168.1.9:3000'],
 
@@ -21,8 +25,8 @@ const nextConfig: NextConfig = {
       {
         source: '/(.*)',
         headers: [
-          // Prevent clickjacking
-          { key: 'X-Frame-Options', value: 'DENY' },
+          // Prevent clickjacking (SAMEORIGIN allows reCAPTCHA iframe)
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           // Prevent MIME type sniffing
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           // XSS Protection

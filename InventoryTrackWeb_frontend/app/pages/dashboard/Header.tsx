@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import { Bell, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { fetchInventoryMaterials } from '@/lib/api/material';
-import { messagingApi } from '@/lib/api/messaging';
 
 interface HeaderProps {
   title: string;
@@ -13,8 +11,6 @@ interface HeaderProps {
 }
 
 export const Header = ({ title, subtitle }: HeaderProps) => {
-  const [lowStockCount, setLowStockCount] = useState(0);
-  const [unreadMessages, setUnreadMessages] = useState(0);
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
@@ -28,40 +24,15 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
   };
 
   useEffect(() => {
-    const loadHeaderData = async () => {
-      try {
-        // Load low stock count
-        const inventory = await fetchInventoryMaterials();
-        setLowStockCount(inventory.filter((m) => m.quantity <= m.minimumStock).length);
-
-        // Load unread message count
-        try {
-          const msgResponse = await messagingApi.getUnreadCount();
-          setUnreadMessages(msgResponse.data?.data?.unreadCount || 0);
-        } catch (error) {
-          console.error('Failed to load unread messages', error);
-        }
-      } catch (error) {
-        console.error('Failed to load header data', error);
-      }
-    };
-
-    // Load user from localStorage
+    // Load user from localStorage only - NO API calls in header
     const userData = localStorage.getItem('inventorytrack_user') || localStorage.getItem('user');
     if (userData) {
-      setUser(JSON.parse(userData));
+      try {
+        setUser(JSON.parse(userData));
+      } catch {
+        // ignore parse errors
+      }
     }
-
-    loadHeaderData();
-
-    // Refresh unread count every 30 seconds
-    const interval = setInterval(() => {
-      messagingApi.getUnreadCount()
-        .then(res => setUnreadMessages(res.data?.data?.unreadCount || 0))
-        .catch(err => console.error('Failed to refresh unread count', err));
-    }, 30000);
-
-    return () => clearInterval(interval);
   }, []);
 
   const profileSrc = resolveProfileImageUrl(user?.profileImage);
@@ -77,8 +48,8 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
       </div>
 
       <div className="flex items-center gap-4">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="hidden md:flex gap-2 bg-linear-to-r from-purple-500/10 to-blue-500/10 hover:from-purple-500/20 hover:to-blue-500/20 border-purple-500/30"
           onClick={() => router.push('/AIAssistant')}
         >
@@ -86,26 +57,21 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
           View with AI
         </Button>
 
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="relative"
           onClick={() => router.push('/Notifications')}
           title="Notifications"
         >
           <Bell className="h-5 w-5" />
-          {(lowStockCount > 0 || unreadMessages > 0) && (
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground animate-pulse">
-              {Math.min((lowStockCount > 0 ? 1 : 0) + (unreadMessages > 0 ? 1 : 0), 9)}
-            </span>
-          )}
         </Button>
 
         <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-1.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-primary overflow-hidden">
-            <img 
-              src={profileSrc || fallbackAvatar} 
-              alt="Profile" 
+            <img
+              src={profileSrc || fallbackAvatar}
+              alt="Profile"
               className="w-full h-full object-cover"
               onError={(e) => {
                 e.currentTarget.src = fallbackAvatar;
