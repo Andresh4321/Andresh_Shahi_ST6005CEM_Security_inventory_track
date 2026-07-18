@@ -4,12 +4,13 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { LoginData, loginSchema } from "../schema";
 import { handleLogin } from "@/lib/actions/auth_action";
 import { setAuthTokenClient } from "@/lib/api/axois";
 import GoogleLoginButton from "./GoogleLoginButton";
+import ReCaptcha from "./ReCaptcha";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -27,6 +28,11 @@ export default function LoginForm() {
   const [showMfaInput, setShowMfaInput] = useState(false);
   const [lockoutMessage, setLockoutMessage] = useState("");
   const [passwordExpired, setPasswordExpired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+
+  const handleCaptchaVerify = useCallback((token: string | null) => {
+    setCaptchaToken(token);
+  }, []);
 
   const onSubmit = async (data: LoginData) => {
     setError("");

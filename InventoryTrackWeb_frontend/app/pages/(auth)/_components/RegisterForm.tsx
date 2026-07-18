@@ -4,11 +4,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { RegisterData, registerSchema } from "../schema";
-import { useTransition } from "react";
+import { useTransition, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { handleRegister } from "@/lib/actions/auth_action";
 import PasswordStrengthBar from "./PasswordStrengthBar";
 import GoogleLoginButton from "./GoogleLoginButton";
+import ReCaptcha from "./ReCaptcha";
 
 export default function RegisterForm() {
     const router = useRouter();
@@ -25,11 +26,16 @@ export default function RegisterForm() {
     });
 
     const [pending, startTransition] = useTransition();
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
     const passwordValue = watch("password", "");
+
+    const handleCaptchaVerify = useCallback((token: string | null) => {
+        setCaptchaToken(token);
+    }, []);
 
     const submit = async (values: RegisterData) => {
         try {
-            const result = await handleRegister(values);
+            const result = await handleRegister({ ...values, captchaToken });
 
             if (result.success) {
                 router.push("/login");
@@ -118,9 +124,12 @@ export default function RegisterForm() {
                 )}
             </div>
 
+            {/* CAPTCHA - prevents automated bot registrations */}
+            <ReCaptcha onVerify={handleCaptchaVerify} />
+
             <button
   type="submit"
-  disabled={isSubmitting || pending}
+  disabled={isSubmitting || pending || !captchaToken}
   className="h-10 w-full rounded-md bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors"
 >
   {isSubmitting || pending ? "Creating account..." : "Create account"}
