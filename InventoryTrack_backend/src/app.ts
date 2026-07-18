@@ -18,6 +18,9 @@ import messageRoutes from './routes/messaging/message.route';
 import { apiLimiter } from './middleware/rateLimiter.middleware';
 import { inputSanitizer } from './middleware/sanitize.middleware';
 import { auditLogger } from './middleware/auditLogger.middleware';
+import { ipBlockCheck } from './middleware/ipBlock.middleware';
+import securityRoutes from './routes/admin/security.route';
+import dataExportRoutes from './routes/user/dataExport.route';
 
 const app: Application = express();
 
@@ -27,14 +30,14 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "https://accounts.google.com"],
+            scriptSrc: ["'self'", "https://accounts.google.com", "https://www.google.com", "https://www.gstatic.com"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com"],
             imgSrc: ["'self'", "data:", "blob:", "http://localhost:3000", "http://localhost:5000", "https://*.googleusercontent.com"],
-            connectSrc: ["'self'", "http://localhost:3000", "https://accounts.google.com", "https://oauth2.googleapis.com"],
+            connectSrc: ["'self'", "http://localhost:3000", "https://accounts.google.com", "https://oauth2.googleapis.com", "https://www.google.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             objectSrc: ["'none'"],
             mediaSrc: ["'self'"],
-            frameSrc: ["https://accounts.google.com"]
+            frameSrc: ["https://accounts.google.com", "https://www.google.com"]
         }
     },
     crossOriginEmbedderPolicy: false, // Allow serving uploaded images
@@ -96,8 +99,15 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 // ========== INPUT SANITIZATION (XSS + NoSQL Injection) ==========
 app.use(inputSanitizer);
 
+// ========== IP-BASED BLOCKING ==========
+// Check if the requesting IP is blocked before processing auth requests
+// Blocks IPs with excessive failed authentication attempts
+app.use('/api/auth', ipBlockCheck);
+
 // ========== GLOBAL RATE LIMITING ==========
-app.use('/api', apiLimiter);
+// Disabled globally - rate limiting is applied per-route on auth endpoints only
+// (authLimiter on login/register, passwordResetLimiter on reset endpoints)
+// app.use('/api', apiLimiter);
 
 // ========== AUDIT LOGGING ==========
 app.use(auditLogger);
@@ -111,6 +121,12 @@ app.use('/api/admin/users', adminUserRoutes);
 
 // Mount admin audit routes
 app.use('/api/admin/audit', auditRoutes);
+
+// Mount admin security monitoring routes
+app.use('/api/admin/security', securityRoutes);
+
+// Mount user data export/import routes (GDPR data portability)
+app.use('/api/user/data', dataExportRoutes);
 
 // Mount material routes
 app.use('/api/materials', materialRoutes);
