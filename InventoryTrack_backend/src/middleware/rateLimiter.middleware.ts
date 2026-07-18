@@ -4,7 +4,7 @@ import { RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX_REQUESTS } from '../config';
 // General API rate limiter - 500 requests per 15 min window (allows normal app usage)
 export const apiLimiter = rateLimit({
     windowMs: RATE_LIMIT_WINDOW_MS,
-    max: 500,
+    max: 10000,
     message: { success: false, message: 'Too many requests, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
