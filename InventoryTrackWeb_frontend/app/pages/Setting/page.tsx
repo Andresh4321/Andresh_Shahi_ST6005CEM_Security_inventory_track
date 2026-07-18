@@ -337,10 +337,58 @@ const Settings = () => {
             <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
               <div>
                 <p className="font-medium">Data Export</p>
-                <p className="text-sm text-muted-foreground">Download your data in CSV format</p>
+                <p className="text-sm text-muted-foreground">Download all your personal data (GDPR compliant)</p>
               </div>
-              <Button variant="outline" size="sm" disabled>
+              <Button variant="outline" size="sm" onClick={async () => {
+                try {
+                  const { apiClient } = await import('@/lib/api/client');
+                  const res = await apiClient.get('/user/data/export');
+                  const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `inventorytrack_data_export_${new Date().toISOString().split('T')[0]}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  toast({ title: "Success", description: "Data exported successfully" });
+                } catch (err: any) {
+                  toast({ title: "Error", description: err.message || "Failed to export data", variant: "destructive" });
+                }
+              }}>
                 Export Data
+              </Button>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div>
+                <p className="font-medium">Data Import</p>
+                <p className="text-sm text-muted-foreground">Import previously exported data (materials)</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = async (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (!file) return;
+                  try {
+                    const text = await file.text();
+                    const importData = JSON.parse(text);
+                    const { apiClient } = await import('@/lib/api/client');
+                    const res = await apiClient.post('/user/data/import', importData);
+                    if (res.data.success) {
+                      toast({ title: "Success", description: res.data.message });
+                    } else {
+                      toast({ title: "Error", description: res.data.message, variant: "destructive" });
+                    }
+                  } catch (err: any) {
+                    toast({ title: "Error", description: err.message || "Failed to import data", variant: "destructive" });
+                  }
+                };
+                input.click();
+              }}>
+                Import Data
               </Button>
             </div>
           </div>
