@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { getUserData } from "@/lib/cookie";
-import { User, Shield, Search, LogOut, Home } from "lucide-react";
+import { User, Shield, Search, LogOut, Home, FileText, AlertTriangle } from "lucide-react";
 
 export default async function AdminRootLayout({ children }: { children: ReactNode }) {
     const userData = await getUserData();
@@ -31,6 +31,16 @@ export default async function AdminRootLayout({ children }: { children: ReactNod
                         className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all font-medium group">
                         <Search size={18} className="group-hover:text-teal-600 transition-colors" />
                         <span>Find User</span>
+                    </Link>
+                    <Link href="/admin/audit-logs"
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all font-medium group">
+                        <FileText size={18} className="group-hover:text-teal-600 transition-colors" />
+                        <span>Audit Logs</span>
+                    </Link>
+                    <Link href="/admin/security"
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all font-medium group">
+                        <AlertTriangle size={18} className="group-hover:text-teal-600 transition-colors" />
+                        <span>Security Alerts</span>
                     </Link>
                 </nav>
 
