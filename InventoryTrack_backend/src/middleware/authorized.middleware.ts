@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken"
+import crypto from "crypto";
 import { JWT_SECRET } from "../config";
 import { UserRepository } from "../routes/repositories/auth/auth.respository";
 import { UserInfo } from "node:os";
@@ -32,11 +33,21 @@ export async function authorizedMiddelWare(req: Request, res: Response, next: Ne
         const decoded = jwt.verify(token, JWT_SECRET) as Record<string, any>; // decoded -> payload
         if(!decoded || !decoded.id)
             throw new HttpError( 401, "Unauthorized, Invalid Token" );
-        
+
+        // Session binding: verify user-agent fingerprint matches the one in JWT
+        // This prevents stolen tokens from being used on different devices/browsers
+        if (decoded.uaFp) {
+            const currentUa = req.headers['user-agent'] || 'unknown';
+            const currentFingerprint = crypto.createHash('sha256').update(currentUa).digest('hex').substring(0, 16);
+            if (decoded.uaFp !== currentFingerprint) {
+                throw new HttpError(401, "Session invalid: device mismatch detected. Please log in again.");
+            }
+        }
+
         const user = await userRepository.getUserById( decoded.id ); // make function async
         if(!user)
             throw new HttpError( 401, "Unauthorized, User Not Found" );
-        
+
         req.user = user;
          next();
     }catch(err: Error | any){
