@@ -8,6 +8,8 @@ import { validatePasswordStrength, isPasswordExpired } from "../../utils/passwor
 import { encryptData, decryptData } from "../../utils/encryption";
 import { generateMfaSecret, generateQRCode, verifyMfaToken } from "../../utils/mfa";
 import { UserModel, IUser } from "../../models/auth/user.models";
+import { recordFailedAttempt, clearFailedAttempts } from "../../middleware/ipBlock.middleware";
+import { SecurityMonitoringService } from "../security/monitoring.service";
 
 let userRepository = new UserRepository();
 
@@ -54,8 +56,8 @@ export class AuthService {
         return { user: newUser, token, passwordStrength: passwordValidation.strength };
     }
 
-    // ========== LOGIN WITH LOCKOUT + MFA + PASSWORD EXPIRY ==========
-    async loginUser(data: LoginDto, clientIp?: string) {
+    // ========== LOGIN WITH LOCKOUT + MFA + PASSWORD EXPIRY + SESSION BINDING ==========
+    async loginUser(data: LoginDto, clientIp?: string, userAgent?: string) {
         const user = await userRepository.getUserByEmail(data.email);
         if (!user) {
             throw new HttpError(404, "User not found");
@@ -75,6 +77,9 @@ export class AuthService {
         const validPassword = await bcryptjs.compare(data.password, user.password as string);
 
         if (!validPassword) {
+            // Record IP-based failed attempt for IP blocking
+            await recordFailedAttempt(clientIp || 'unknown', '/api/auth/login');
+
             // Increment failed login attempts
             const updates: any = {
                 loginAttempts: (user.loginAttempts || 0) + 1,
@@ -86,15 +91,27 @@ export class AuthService {
                 }
             };
 
+            // Generate security alert at 5 failed attempts
+            const attemptCount = (user.loginAttempts || 0) + 1;
+            if (attemptCount === 5) {
+                SecurityMonitoringService.alertBruteForce(clientIp || 'unknown', attemptCount, data.email).catch(() => {});
+            }
+
             // Lock account if max attempts reached
-            if ((user.loginAttempts || 0) + 1 >= MAX_LOGIN_ATTEMPTS) {
+            if (attemptCount >= MAX_LOGIN_ATTEMPTS) {
                 updates.lockUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000);
                 await UserModel.findByIdAndUpdate(user._id, updates);
+
+                // Generate account locked alert
+                SecurityMonitoringService.alertAccountLocked(
+                    user._id.toString(), user.email, clientIp || 'unknown'
+                ).catch(() => {});
+
                 throw new HttpError(423, `Account locked due to ${MAX_LOGIN_ATTEMPTS} failed attempts. Try again in ${LOCKOUT_DURATION_MINUTES} minutes.`);
             }
 
             await UserModel.findByIdAndUpdate(user._id, updates);
-            const remaining = MAX_LOGIN_ATTEMPTS - ((user.loginAttempts || 0) + 1);
+            const remaining = MAX_LOGIN_ATTEMPTS - attemptCount;
             throw new HttpError(401, `Invalid credentials. ${remaining} attempts remaining before lockout.`);
         }
 
@@ -128,6 +145,9 @@ export class AuthService {
             lastLoginIP: clientIp || 'unknown'
         });
 
+        // Clear IP-based failed attempts on successful login
+        await clearFailedAttempts(clientIp || 'unknown');
+
         // Decrypt phone_number for client display
         let decryptedPhone = user.phone_number;
         try {
@@ -139,11 +159,19 @@ export class AuthService {
             decryptedPhone = user.phone_number;
         }
 
+        // Session binding: include user-agent fingerprint in JWT payload
+        // This prevents stolen tokens from being used on different devices
+        const crypto = await import('crypto');
+        const uaFingerprint = userAgent
+            ? crypto.createHash('sha256').update(userAgent).digest('hex').substring(0, 16)
+            : undefined;
+
         const payload = {
             id: user._id,
             email: user.email,
             phone_number: decryptedPhone,
-            role: user.role
+            role: user.role,
+            uaFp: uaFingerprint // User-agent fingerprint for session binding
         };
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
 

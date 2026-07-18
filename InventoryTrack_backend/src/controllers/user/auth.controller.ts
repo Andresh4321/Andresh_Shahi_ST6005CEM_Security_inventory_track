@@ -44,7 +44,8 @@ export class AuthController {
                 );
             }
             const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-            const result = await authService.loginUser(parsedData.data, clientIp);
+            const userAgent = req.headers['user-agent'] || 'unknown';
+            const result = await authService.loginUser(parsedData.data, clientIp, userAgent);
 
             // Check if MFA is required
             if ((result as any).mfaRequired) {
