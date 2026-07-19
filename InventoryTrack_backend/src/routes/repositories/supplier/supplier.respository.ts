@@ -48,7 +48,11 @@ export class SupplierRepository implements ISupplierRepository{
         return suppliers.length > 0 ? suppliers : null;
     }
     async getSupplierByProductAndUser(product: string, userId: string){
-        const suppliers = await SupplierModel.find({ products: { $regex: product, $options: 'i' }, user: userId });
+        // SECURITY FIX: Escape special regex characters from user input to prevent ReDoS
+        // Previously, attackers could inject regex patterns like ".*" or "(a+)+$" causing
+        // catastrophic backtracking and denial of service.
+        const escapedProduct = product.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const suppliers = await SupplierModel.find({ products: { $regex: escapedProduct, $options: 'i' }, user: userId });
         return suppliers.length > 0 ? suppliers : null;
     }
     async deleteSupplierbyId(id: string){
