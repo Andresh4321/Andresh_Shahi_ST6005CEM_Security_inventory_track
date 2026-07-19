@@ -124,7 +124,7 @@ export default function RegisterForm() {
                 )}
             </div>
 
-            {/* CAPTCHA - prevents automated bot registrations */}
+            CAPTCHA - prevents automated bot registrations
             <ReCaptcha onVerify={handleCaptchaVerify} />
 
             <button

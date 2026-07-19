@@ -36,7 +36,12 @@ export async function authorizedMiddelWare(req: Request, res: Response, next: Ne
 
         // Session binding: verify user-agent fingerprint matches the one in JWT
         // This prevents stolen tokens from being used on different devices/browsers
-        if (decoded.uaFp) {
+        // DEV/TEST ONLY: set DISABLE_FINGERPRINT_CHECK=true in .env to bypass while pentesting
+        // Must never be true in production.
+        const fingerprintCheckDisabled = process.env.NODE_ENV !== 'production'
+            && process.env.DISABLE_FINGERPRINT_CHECK === 'true';
+
+        if (decoded.uaFp && !fingerprintCheckDisabled) {
             const currentUa = req.headers['user-agent'] || 'unknown';
             const currentFingerprint = crypto.createHash('sha256').update(currentUa).digest('hex').substring(0, 16);
             if (decoded.uaFp !== currentFingerprint) {
@@ -55,13 +60,6 @@ export async function authorizedMiddelWare(req: Request, res: Response, next: Ne
             { success: false, message: err.message || "Unauthorized" }
         )
     }
-    
-    // if(req.headers && req.headers.authorization){
-    //     return next();
-    // }
-    // return res.status(401).json(
-    //     { success: false, message: "Unauthorized" }
-    // )
    
 }
  export async function adminMiddelware(req: Request, res: Response, next: NextFunction) {
