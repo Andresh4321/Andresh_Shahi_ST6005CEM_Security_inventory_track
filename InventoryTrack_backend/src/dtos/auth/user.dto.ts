@@ -1,12 +1,13 @@
 import z from "zod";
 
 // Register schema
+// SECURITY FIX: role field removed — all new registrations are "user" by default.
+// Previously, attackers could pass role:"admin" in the request body to escalate privileges.
 export const RegisterDTO = z.object({
   fullname: z.string().optional(),
   email: z.string().email(),
   phone_number: z.string().min(3).max(20),
   password: z.string().min(6),
-  role: z.enum(["user", "admin"]).default("user"),
   profileImage: z.string().optional()
 });
 export type RegisterDTO = z.infer<typeof RegisterDTO>;

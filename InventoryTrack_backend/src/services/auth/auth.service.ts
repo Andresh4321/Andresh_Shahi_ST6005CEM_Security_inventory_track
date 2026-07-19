@@ -32,8 +32,11 @@ export class AuthService {
         const originalPassword = data.password;
         data.password = hashedPassword;
 
+        // SECURITY FIX: Force role to "user" — prevent privilege escalation via registration
+        // Even if somehow a role field bypasses DTO validation, it is overwritten here.
+        const userData: any = { ...data, role: 'user' };
+
         // Encrypt sensitive data (phone_number) before storage
-        const userData: any = { ...data };
         if (userData.phone_number) {
             userData.phone_number = encryptData(userData.phone_number);
         }
@@ -51,7 +54,7 @@ export class AuthService {
             phone_number: data.phone_number, // Return original (unencrypted) to client
             role: newUser.role
         };
-        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '15d' });
 
         return { user: newUser, token, passwordStrength: passwordValidation.strength };
     }
@@ -173,11 +176,17 @@ export class AuthService {
             role: user.role,
             uaFp: uaFingerprint // User-agent fingerprint for session binding
         };
-        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '15d' });
 
         // Return user object with decrypted phone for frontend
+        // SECURITY FIX: Remove sensitive fields from response to prevent data leakage
         const userResponse = user.toObject ? user.toObject() : { ...user };
         userResponse.phone_number = decryptedPhone;
+        delete userResponse.password;
+        delete userResponse.previousPasswords;
+        delete userResponse.mfaSecret;
+        delete userResponse.resetPasswordToken;
+        delete userResponse.emailOTP;
 
         return { user: userResponse, token };
     }
@@ -295,10 +304,16 @@ export class AuthService {
             phone_number: adminDecryptedPhone,
             role: user.role
         };
-        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '15d' });
 
         const adminUserResponse = user.toObject ? user.toObject() : { ...user };
         adminUserResponse.phone_number = adminDecryptedPhone;
+        // SECURITY FIX: Strip sensitive fields from admin login response
+        delete adminUserResponse.password;
+        delete adminUserResponse.previousPasswords;
+        delete adminUserResponse.mfaSecret;
+        delete adminUserResponse.resetPasswordToken;
+        delete adminUserResponse.emailOTP;
 
         return { user: adminUserResponse, token };
     }
@@ -418,11 +433,26 @@ export class AuthService {
     }
 
     // ========== VERIFY MFA ON LOGIN ==========
+    // SECURITY FIX: Added MFA attempt limiting to prevent brute-force of 6-digit TOTP codes.
+    // Attackers could previously enumerate all 1,000,000 possible codes within the 5-min
+    // tempToken window. Now limited to 5 attempts before the temp token is invalidated.
+    private mfaAttempts: Map<string, number> = new Map();
+    private readonly MFA_MAX_ATTEMPTS = 5;
+
     async verifyMfaLogin(tempToken: string, mfaToken: string) {
         try {
             const decoded = jwt.verify(tempToken, JWT_SECRET) as any;
             if (!decoded.mfaPending) {
                 throw new HttpError(400, "Invalid token");
+            }
+
+            // Track MFA attempts per tempToken to prevent brute force
+            const attemptKey = `${decoded.id}_mfa`;
+            const currentAttempts = this.mfaAttempts.get(attemptKey) || 0;
+
+            if (currentAttempts >= this.MFA_MAX_ATTEMPTS) {
+                this.mfaAttempts.delete(attemptKey);
+                throw new HttpError(429, "Too many MFA attempts. Please log in again to get a new code.");
             }
 
             const user = await UserModel.findById(decoded.id);
@@ -432,8 +462,14 @@ export class AuthService {
 
             const isValid = verifyMfaToken(user.mfaSecret, mfaToken);
             if (!isValid) {
-                throw new HttpError(401, "Invalid MFA token");
+                // Increment attempt counter
+                this.mfaAttempts.set(attemptKey, currentAttempts + 1);
+                const remaining = this.MFA_MAX_ATTEMPTS - (currentAttempts + 1);
+                throw new HttpError(401, `Invalid MFA token. ${remaining} attempts remaining.`);
             }
+
+            // Successful — clear attempt counter
+            this.mfaAttempts.delete(attemptKey);
 
             // Issue full access token
             const payload = {
@@ -442,7 +478,7 @@ export class AuthService {
                 phone_number: user.phone_number,
                 role: user.role
             };
-            const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
+            const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '15d' });
 
             // Update login tracking
             await UserModel.findByIdAndUpdate(user._id, {
