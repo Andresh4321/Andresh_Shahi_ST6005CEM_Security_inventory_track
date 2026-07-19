@@ -297,9 +297,19 @@ export class AuthController {
         try {
             const { email } = req.body;
 
+            // SECURITY FIX: Always return the same generic response regardless of whether
+            // the email exists. This prevents email enumeration attacks where attackers
+            // use different response messages to determine valid accounts.
+            const genericResponse = { success: true, message: "If an account with that email exists, a password reset link has been sent." };
+
+            if (!email || typeof email !== 'string') {
+                return res.status(200).json(genericResponse);
+            }
+
             const user = await UserModel.findOne({ email });
             if (!user) {
-                return res.status(404).json({ success: false, message: "User not found" });
+                // Do NOT reveal that the user doesn't exist — return same response
+                return res.status(200).json(genericResponse);
             }
 
             const resetToken = crypto.randomBytes(32).toString("hex");
@@ -326,10 +336,11 @@ export class AuthController {
                        <p>This link will expire in 15 minutes.</p>`
             });
 
-            res.status(200).json({ success: true, message: "Password reset email sent" });
+            res.status(200).json(genericResponse);
         } catch (err: any) {
             console.error(err);
-            res.status(500).json({ success: false, message: "Error sending reset email" });
+            // Even on error, return generic response to prevent information leakage
+            res.status(200).json({ success: true, message: "If an account with that email exists, a password reset link has been sent." });
         }
     }
 
