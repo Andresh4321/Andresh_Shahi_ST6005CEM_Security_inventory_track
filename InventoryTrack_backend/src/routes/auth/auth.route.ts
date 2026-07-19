@@ -2,7 +2,7 @@ import { Router } from "express";
 import { AuthController } from "../../controllers/user/auth.controller";
 import { authorizedMiddelWare } from "../../middleware/authorized.middleware";
 import { uploads } from "../../middleware/upload.middleware";
-import { authLimiter, passwordResetLimiter } from "../../middleware/rateLimiter.middleware";
+import { authLimiter, passwordResetLimiter, mfaLimiter } from "../../middleware/rateLimiter.middleware";
 import { generateCsrfToken } from "../../middleware/csrf.middleware";
 import { verifyCaptcha } from "../../middleware/captcha.middleware";
 
@@ -17,8 +17,8 @@ router.post('/login', authLimiter, authController.loginUser);
 // Admin login endpoint (requires email, password, role: 'admin')
 router.post('/admin/login', authLimiter, authController.loginAdmin);
 
-// MFA verification for login (rate limited)
-router.post('/mfa/verify-login', authLimiter, authController.verifyMfaLogin);
+// MFA verification for login (strict rate limited — prevents TOTP brute force)
+router.post('/mfa/verify-login', mfaLimiter, authController.verifyMfaLogin);
 
 // Google OAuth login (rate limited to prevent abuse)
 router.post('/google', authLimiter, authController.googleLogin);
