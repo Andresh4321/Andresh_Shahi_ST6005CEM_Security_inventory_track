@@ -105,9 +105,9 @@ app.use(inputSanitizer);
 app.use('/api/auth', ipBlockCheck);
 
 // ========== GLOBAL RATE LIMITING ==========
-// Disabled globally - rate limiting is applied per-route on auth endpoints only
-// (authLimiter on login/register, passwordResetLimiter on reset endpoints)
-// app.use('/api', apiLimiter);
+// SECURITY FIX: Re-enabled global rate limiting to prevent API abuse and DoS.
+// Auth endpoints have stricter per-route limits (authLimiter, mfaLimiter).
+app.use('/api', apiLimiter);
 
 // ========== AUDIT LOGGING ==========
 app.use(auditLogger);
